@@ -477,6 +477,7 @@ class OAIAPICompatLargeLanguageModel(_CommonOaiApiCompat, LargeLanguageModel):
 
         finish_reason = None  # The default value of finish_reason is None
         message_id, usage = None, None
+        need_prefix_think = credentials.get("prefix_think", "no") == "yes"
         for chunk in response.iter_lines(decode_unicode=True, delimiter=delimiter):
             chunk = chunk.strip()
             if chunk:
@@ -559,6 +560,10 @@ class OAIAPICompatLargeLanguageModel(_CommonOaiApiCompat, LargeLanguageModel):
                 else:
                     continue
 
+                if need_prefix_think:
+                    assistant_prompt_message.content = '<think>\n' + assistant_prompt_message.content
+                    need_prefix_think = False
+
                 yield LLMResultChunk(
                     id=message_id,
                     model=model,
@@ -612,6 +617,10 @@ class OAIAPICompatLargeLanguageModel(_CommonOaiApiCompat, LargeLanguageModel):
 
         elif completion_type is LLMMode.COMPLETION:
             response_content = output["text"]
+
+        need_prefix_think = credentials.get("prefix_think", "no") == "yes"
+        if need_prefix_think:
+            response_content = '<think>\n' + response_content
 
         assistant_message = AssistantPromptMessage(content=response_content, tool_calls=[])
 
